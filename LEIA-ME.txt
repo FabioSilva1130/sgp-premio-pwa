@@ -1,0 +1,10 @@
+SGP PRÊMIO PWA FINAL 2.0
+
+1. O app funciona offline e grava primeiro no aparelho.
+2. Na aba Sincronizar, informe uma vez a URL /exec do Apps Script e a SGP_API_KEY.
+3. Endpoint e chave ficam armazenados localmente no aparelho; a chave não está embutida nos arquivos do PWA.
+4. Estados: PENDENTE, SINCRONIZANDO, SINCRONIZADO e ERRO.
+5. O envio usa o contrato da API SGP Prêmio 2.0: apiKey + ocorrencias.
+6. TL113 e TL114 são excluídos.
+7. TL117/TL118: Anderson até 03/09/2026; Gislaine a partir de 04/09/2026.
+8. Faça Backup JSON periodicamente.

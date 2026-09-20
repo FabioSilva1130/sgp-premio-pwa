@@ -1,0 +1,503 @@
+{
+  "version": "FINAL-2.0.0",
+  "periodRule": "21-20",
+  "excludedLooms": [
+    "TL113",
+    "TL114"
+  ],
+  "loomAssignments": [
+    {
+      "tear": "TL001",
+      "name": "DANIEL CARLOS DE CARIS"
+    },
+    {
+      "tear": "TL002",
+      "name": "DANIEL CARLOS DE CARIS"
+    },
+    {
+      "tear": "TL003",
+      "name": "DANIEL CARLOS DE CARIS"
+    },
+    {
+      "tear": "TL004",
+      "name": "DANIEL CARLOS DE CARIS"
+    },
+    {
+      "tear": "TL005",
+      "name": "RAIMUNDO COELHO DA SILVA NETO"
+    },
+    {
+      "tear": "TL006",
+      "name": "RAIMUNDO COELHO DA SILVA NETO"
+    },
+    {
+      "tear": "TL007",
+      "name": "RAIMUNDO COELHO DA SILVA NETO"
+    },
+    {
+      "tear": "TL008",
+      "name": "RAIMUNDO COELHO DA SILVA NETO"
+    },
+    {
+      "tear": "TL009",
+      "name": "LUNA TAYNA PENHA"
+    },
+    {
+      "tear": "TL010",
+      "name": "LUNA TAYNA PENHA"
+    },
+    {
+      "tear": "TL011",
+      "name": "LUNA TAYNA PENHA"
+    },
+    {
+      "tear": "TL012",
+      "name": "LUNA TAYNA PENHA"
+    },
+    {
+      "tear": "TL013",
+      "name": "BRUNA FERNANDA R SILVA"
+    },
+    {
+      "tear": "TL014",
+      "name": "BRUNA FERNANDA R SILVA"
+    },
+    {
+      "tear": "TL015",
+      "name": "BRUNA FERNANDA R SILVA"
+    },
+    {
+      "tear": "TL016",
+      "name": "BRUNA FERNANDA R SILVA"
+    },
+    {
+      "tear": "TL017",
+      "name": "FELIPE OTAVIO DE JESUS AGUIAR"
+    },
+    {
+      "tear": "TL018",
+      "name": "FELIPE OTAVIO DE JESUS AGUIAR"
+    },
+    {
+      "tear": "TL019",
+      "name": "FELIPE OTAVIO DE JESUS AGUIAR"
+    },
+    {
+      "tear": "TL020",
+      "name": "FELIPE OTAVIO DE JESUS AGUIAR"
+    },
+    {
+      "tear": "TL021",
+      "name": "LILIAN BRUNA CANDIDO"
+    },
+    {
+      "tear": "TL022",
+      "name": "LILIAN BRUNA CANDIDO"
+    },
+    {
+      "tear": "TL023",
+      "name": "LILIAN BRUNA CANDIDO"
+    },
+    {
+      "tear": "TL024",
+      "name": "LILIAN BRUNA CANDIDO"
+    },
+    {
+      "tear": "TL025",
+      "name": "LAIZA ESPERANÇA DE ANDRADE"
+    },
+    {
+      "tear": "TL026",
+      "name": "LAIZA ESPERANÇA DE ANDRADE"
+    },
+    {
+      "tear": "TL027",
+      "name": "LAIZA ESPERANÇA DE ANDRADE"
+    },
+    {
+      "tear": "TL028",
+      "name": "LAIZA ESPERANÇA DE ANDRADE"
+    },
+    {
+      "tear": "TL029",
+      "name": "DANIELLE SOUZA DE JESUS"
+    },
+    {
+      "tear": "TL030",
+      "name": "DANIELLE SOUZA DE JESUS"
+    },
+    {
+      "tear": "TL031",
+      "name": "DANIELLE SOUZA DE JESUS"
+    },
+    {
+      "tear": "TL032",
+      "name": "DANIELLE SOUZA DE JESUS"
+    },
+    {
+      "tear": "TL033",
+      "name": "RAFAELA DA SILVA AGOSTINHO"
+    },
+    {
+      "tear": "TL034",
+      "name": "RAFAELA DA SILVA AGOSTINHO"
+    },
+    {
+      "tear": "TL035",
+      "name": "RAFAELA DA SILVA AGOSTINHO"
+    },
+    {
+      "tear": "TL036",
+      "name": "RAFAELA DA SILVA AGOSTINHO"
+    },
+    {
+      "tear": "TL044",
+      "name": "LUIZ HENRIQUE DOS SANTOS ROBERTO"
+    },
+    {
+      "tear": "TL045",
+      "name": "LUIZ HENRIQUE DOS SANTOS ROBERTO"
+    },
+    {
+      "tear": "TL046",
+      "name": "LUIZ HENRIQUE DOS SANTOS ROBERTO"
+    },
+    {
+      "tear": "TL047",
+      "name": "LUIZ HENRIQUE DOS SANTOS ROBERTO"
+    },
+    {
+      "tear": "TL048",
+      "name": "ANDREIA COSTA DA SILVA BRITO"
+    },
+    {
+      "tear": "TL049",
+      "name": "ANDREIA COSTA DA SILVA BRITO"
+    },
+    {
+      "tear": "TL050",
+      "name": "ANDREIA COSTA DA SILVA BRITO"
+    },
+    {
+      "tear": "TL051",
+      "name": "MARIA EDNA DA SILVA RIBEIRO"
+    },
+    {
+      "tear": "TL052",
+      "name": "MARIA EDNA DA SILVA RIBEIRO"
+    },
+    {
+      "tear": "TL053",
+      "name": "CARLA RODRIGUES LAURIANO ANDRADE"
+    },
+    {
+      "tear": "TL054",
+      "name": "CARLA RODRIGUES LAURIANO ANDRADE"
+    },
+    {
+      "tear": "TL055",
+      "name": "CARLA RODRIGUES LAURIANO ANDRADE"
+    },
+    {
+      "tear": "TL056",
+      "name": "CARLA RODRIGUES LAURIANO ANDRADE"
+    },
+    {
+      "tear": "TL057",
+      "name": "JULIANA APARECIDA MOREIRA CARDOSO"
+    },
+    {
+      "tear": "TL058",
+      "name": "JULIANA APARECIDA MOREIRA CARDOSO"
+    },
+    {
+      "tear": "TL059",
+      "name": "JULIANA APARECIDA MOREIRA CARDOSO"
+    },
+    {
+      "tear": "TL060",
+      "name": "JULIANA APARECIDA MOREIRA CARDOSO"
+    },
+    {
+      "tear": "TL061",
+      "name": "GRACIELA DE AQUINO COELHO"
+    },
+    {
+      "tear": "TL062",
+      "name": "GRACIELA DE AQUINO COELHO"
+    },
+    {
+      "tear": "TL063",
+      "name": "GRACIELA DE AQUINO COELHO"
+    },
+    {
+      "tear": "TL064",
+      "name": "GRACIELA DE AQUINO COELHO"
+    },
+    {
+      "tear": "TL065",
+      "name": "VIVIANE SANTOS SOUZA"
+    },
+    {
+      "tear": "TL066",
+      "name": "VIVIANE SANTOS SOUZA"
+    },
+    {
+      "tear": "TL067",
+      "name": "VIVIANE SANTOS SOUZA"
+    },
+    {
+      "tear": "TL068",
+      "name": "VIVIANE SANTOS SOUZA"
+    },
+    {
+      "tear": "TL069",
+      "name": "ALINE GENARO"
+    },
+    {
+      "tear": "TL070",
+      "name": "ALINE GENARO"
+    },
+    {
+      "tear": "TL071",
+      "name": "ALINE GENARO"
+    },
+    {
+      "tear": "TL072",
+      "name": "ALINE GENARO"
+    },
+    {
+      "tear": "TL073",
+      "name": "ALINNE COSTA CRUZ"
+    },
+    {
+      "tear": "TL074",
+      "name": "ALINNE COSTA CRUZ"
+    },
+    {
+      "tear": "TL075",
+      "name": "ALINNE COSTA CRUZ"
+    },
+    {
+      "tear": "TL076",
+      "name": "ALINNE COSTA CRUZ"
+    },
+    {
+      "tear": "TL077",
+      "name": "MAVILLON DA SILVA ROMAO"
+    },
+    {
+      "tear": "TL078",
+      "name": "MAVILLON DA SILVA ROMAO"
+    },
+    {
+      "tear": "TL079",
+      "name": "MAVILLON DA SILVA ROMAO"
+    },
+    {
+      "tear": "TL080",
+      "name": "MAVILLON DA SILVA ROMAO"
+    },
+    {
+      "tear": "TL081",
+      "name": "ROSIVANIA BARBOSA PARDINHO"
+    },
+    {
+      "tear": "TL082",
+      "name": "ROSIVANIA BARBOSA PARDINHO"
+    },
+    {
+      "tear": "TL083",
+      "name": "ROSIVANIA BARBOSA PARDINHO"
+    },
+    {
+      "tear": "TL084",
+      "name": "ROSIVANIA BARBOSA PARDINHO"
+    },
+    {
+      "tear": "TL085",
+      "name": "MARTA DOS SANTOS GOMES"
+    },
+    {
+      "tear": "TL086",
+      "name": "MARTA DOS SANTOS GOMES"
+    },
+    {
+      "tear": "TL087",
+      "name": "MARTA DOS SANTOS GOMES"
+    },
+    {
+      "tear": "TL088",
+      "name": "MARTA DOS SANTOS GOMES"
+    },
+    {
+      "tear": "TL089",
+      "name": "ARETHA OLIVEIRA DOS SANTOS"
+    },
+    {
+      "tear": "TL090",
+      "name": "ARETHA OLIVEIRA DOS SANTOS"
+    },
+    {
+      "tear": "TL091",
+      "name": "ARETHA OLIVEIRA DOS SANTOS"
+    },
+    {
+      "tear": "TL092",
+      "name": "ARETHA OLIVEIRA DOS SANTOS"
+    },
+    {
+      "tear": "TL093",
+      "name": "SUELLEN DA COSTA SEBIN VIEIRA"
+    },
+    {
+      "tear": "TL094",
+      "name": "SUELLEN DA COSTA SEBIN VIEIRA"
+    },
+    {
+      "tear": "TL095",
+      "name": "SUELLEN DA COSTA SEBIN VIEIRA"
+    },
+    {
+      "tear": "TL096",
+      "name": "SUELLEN DA COSTA SEBIN VIEIRA"
+    },
+    {
+      "tear": "TL097",
+      "name": "RENATO DA GRACA CIPRIANO DA SILVA"
+    },
+    {
+      "tear": "TL098",
+      "name": "RENATO DA GRACA CIPRIANO DA SILVA"
+    },
+    {
+      "tear": "TL099",
+      "name": "RENATO DA GRACA CIPRIANO DA SILVA"
+    },
+    {
+      "tear": "TL100",
+      "name": "RENATO DA GRACA CIPRIANO DA SILVA"
+    },
+    {
+      "tear": "TL101",
+      "name": "CLAUDIO BERTOLDO GOMES"
+    },
+    {
+      "tear": "TL102",
+      "name": "CLAUDIO BERTOLDO GOMES"
+    },
+    {
+      "tear": "TL103",
+      "name": "CLAUDIO BERTOLDO GOMES"
+    },
+    {
+      "tear": "TL104",
+      "name": "CLAUDIO BERTOLDO GOMES"
+    },
+    {
+      "tear": "TL105",
+      "name": "LUIZ CHARLES RODRIGUES MATOS"
+    },
+    {
+      "tear": "TL106",
+      "name": "LUIZ CHARLES RODRIGUES MATOS"
+    },
+    {
+      "tear": "TL107",
+      "name": "LUIZ CHARLES RODRIGUES MATOS"
+    },
+    {
+      "tear": "TL108",
+      "name": "LUIZ CHARLES RODRIGUES MATOS"
+    },
+    {
+      "tear": "TL109",
+      "name": "GABRIEL PAULO MOREIRA DO NASCIMENTO"
+    },
+    {
+      "tear": "TL110",
+      "name": "GABRIEL PAULO MOREIRA DO NASCIMENTO"
+    },
+    {
+      "tear": "TL111",
+      "name": "WERNER BERNARDES"
+    },
+    {
+      "tear": "TL112",
+      "name": "WERNER BERNARDES"
+    },
+    {
+      "tear": "TL115",
+      "name": "VINICIUS CAMILO FERREIRA NOVAES"
+    },
+    {
+      "tear": "TL116",
+      "name": "VINICIUS CAMILO FERREIRA NOVAES"
+    },
+    {
+      "tear": "TL119",
+      "name": "CIRLENE JOSE LOURENCO DA SILVA"
+    },
+    {
+      "tear": "TL120",
+      "name": "CIRLENE JOSE LOURENCO DA SILVA"
+    },
+    {
+      "tear": "TL117",
+      "name": "ANDERSON MARQUES DA SILVA",
+      "end": "2026-09-03"
+    },
+    {
+      "tear": "TL117",
+      "name": "GISLAINE VIUTTO PERES TUZIMOTO",
+      "start": "2026-09-04"
+    },
+    {
+      "tear": "TL118",
+      "name": "ANDERSON MARQUES DA SILVA",
+      "end": "2026-09-03"
+    },
+    {
+      "tear": "TL118",
+      "name": "GISLAINE VIUTTO PERES TUZIMOTO",
+      "start": "2026-09-04"
+    }
+  ],
+  "teamNames": [
+    "ALINE GENARO",
+    "ALINNE COSTA CRUZ",
+    "ALTAIR APARECIDO LOBATO",
+    "ANDERSON MARQUES DA SILVA",
+    "ANDREIA COSTA DA SILVA BRITO",
+    "ARETHA OLIVEIRA DOS SANTOS",
+    "BRUNA FERNANDA R SILVA",
+    "CARLA RODRIGUES LAURIANO ANDRADE",
+    "CIRLENE JOSE LOURENCO DA SILVA",
+    "CLAUDIO BERTOLDO GOMES",
+    "DANIEL CARLOS DE CARIS",
+    "DANIELLE SOUZA DE JESUS",
+    "FELIPE OTAVIO DE JESUS AGUIAR",
+    "GABRIEL PAULO MOREIRA DO NASCIMENTO",
+    "GISLAINE VIUTTO PERES TUZIMOTO",
+    "GRACIELA DE AQUINO COELHO",
+    "JULIANA APARECIDA MOREIRA CARDOSO",
+    "LAIZA ESPERANÇA DE ANDRADE",
+    "LILIAN BRUNA CANDIDO",
+    "LUIZ CHARLES RODRIGUES MATOS",
+    "LUIZ HENRIQUE DOS SANTOS ROBERTO",
+    "LUNA TAYNA PENHA",
+    "MARIA EDNA DA SILVA RIBEIRO",
+    "MARTA DOS SANTOS GOMES",
+    "MAVILLON DA SILVA ROMAO",
+    "NICOLE ERICA RODRIGUES DE ARAUJO",
+    "RAFAELA DA SILVA AGOSTINHO",
+    "RAIMUNDO COELHO DA SILVA NETO",
+    "RENATO DA GRACA CIPRIANO DA SILVA",
+    "ROSIVANIA BARBOSA PARDINHO",
+    "SUELLEN DA COSTA SEBIN VIEIRA",
+    "VAGNER GUIMARAES PINTO",
+    "VINICIUS CAMILO FERREIRA NOVAES",
+    "VIVIANE SANTOS SOUZA",
+    "WERNER BERNARDES"
+  ]
+}
