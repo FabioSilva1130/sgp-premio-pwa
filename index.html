@@ -10,12 +10,91 @@
 let CFG, selected=new Set();const K='sgp_premio_occ_final_v1', EK='sgp_premio_endpoint', AK='sgp_premio_api_key';const $=x=>document.getElementById(x);const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s+/g,' ');function today(){return new Date().toISOString().slice(0,10)}function getOcc(){try{return JSON.parse(localStorage.getItem(K)||'[]')}catch{return[]}}function setOcc(v){localStorage.setItem(K,JSON.stringify(v))}function loomNum(t){return +t.replace(/\D/g,'')}function assignment(t,date){return CFG.loomAssignments.find(x=>x.tear===t&&(!x.start||date>=x.start)&&(!x.end||date<=x.end))}function personLooms(name,date){let n=norm(name);return CFG.loomAssignments.filter(x=>norm(x.name)===n&&(!x.start||date>=x.start)&&(!x.end||date<=x.end)).map(x=>x.tear).sort((a,b)=>loomNum(a)-loomNum(b))}function renderLooms(){let all=[...new Set(CFG.loomAssignments.map(x=>x.tear))].filter(x=>!CFG.excludedLooms.includes(x)).sort((a,b)=>loomNum(a)-loomNum(b));$('looms').innerHTML=all.map(t=>`<button type="button" class="loom ${selected.has(t)?'sel':''}" data-loom="${t}">${t}</button>`).join('');document.querySelectorAll('[data-loom]').forEach(b=>b.onclick=()=>{selected.has(b.dataset.loom)?selected.delete(b.dataset.loom):selected.add(b.dataset.loom);renderLooms();validate()})}function validate(){let errs=[],warn=[];let d=$('date').value,p=$('person').value,c=$('cover').value,tp=$('type').value;if(!d)errs.push('Informe a data.');if(!p)errs.push('Informe a pessoa.');if(!selected.size)errs.push('Selecione ao menos um tear.');if(['FALTA','FÉRIAS'].includes(tp)&&$('dest').value==='cover'&&!c)errs.push('Informe quem cobriu ou altere o destino da produção.');if(c&&norm(c)===norm(p))errs.push('Titular e cobertura não podem ser a mesma pessoa.');selected.forEach(t=>{if(CFG.excludedLooms.includes(t))errs.push(`${t} é excluído do SGP.`);let a=assignment(t,d);if(a&&p&&norm(a.name)!==norm(p)&&['FALTA','FÉRIAS','SAÍDA ANTECIPADA','ENTRADA ATRASADA'].includes(tp))warn.push(`${t}: titular cadastrado em ${d.split('-').reverse().join('/')} é ${a.name}.`)});let occ=getOcc();for(let o of occ){if(o.date===d&&o.status!=='SUBSTITUÍDA'){let overlap=o.looms.filter(t=>selected.has(t));if(overlap.length&&norm(o.person)===norm(p)&&o.type===tp)warn.push(`Possível duplicidade: ${overlap.join(', ')} já consta em ocorrência ${o.id}.`)}}$('validation').className='status small '+(errs.length?'err':warn.length?'warn':'ok');$('validation').innerHTML=errs.length?errs.join('<br>'):warn.length?warn.join('<br>'):'Ocorrência consistente para salvar.';return !errs.length}function save(){if(!validate())return;let occ=getOcc();let id='OC-'+Date.now();occ.push({id,date:$('date').value,type:$('type').value,person:$('person').value.trim(),cover:$('cover').value.trim(),destination:$('dest').value,start:$('start').value,end:$('end').value,looms:[...selected].sort((a,b)=>loomNum(a)-loomNum(b)),note:$('note').value.trim(),status:'VALIDADA',createdAt:new Date().toISOString(),sync:'PENDENTE'});setOcc(occ);selected.clear();$('cover').value='';$('note').value='';$('start').value='';$('end').value='';renderLooms();validate();renderHistory();updateSync();alert('Ocorrência salva.')}
 function renderHistory(){let q=norm($('search')?.value||'');let a=getOcc().slice().reverse().filter(o=>!q||norm(JSON.stringify(o)).includes(q));$('historyList').innerHTML=a.length?a.map(o=>`<div class="row"><b>${o.date.split('-').reverse().join('/')} · ${o.type}</b><div>${o.person}</div><div class="small">${o.looms.join(', ')}${o.cover?' · Cobertura: '+o.cover:''}</div><span class="pill">${o.sync}</span></div>`).join(''):'<p class="small">Nenhuma ocorrência.</p>'}function renderTeam(){let q=norm($('teamSearch')?.value||'');let groups={};CFG.loomAssignments.forEach(x=>{let k=x.name;groups[k]=groups[k]||[];groups[k].push(x)});$('teamList').innerHTML=Object.entries(groups).filter(([n,a])=>!q||norm(n+' '+a.map(x=>x.tear).join(' ')).includes(q)).sort().map(([n,a])=>`<div class="row"><b>${n}</b><div class="small">${a.sort((x,y)=>loomNum(x.tear)-loomNum(y.tear)).map(x=>x.tear+(x.start?' desde '+x.start.split('-').reverse().join('/'):'')+(x.end?' até '+x.end.split('-').reverse().join('/'):'')).join(' · ')}</div></div>`).join('')}
 function toApiOccurrence(o){return {id:o.id,data:o.date||'',turno:o.turno||'',matricula:o.matricula||'',nome:o.person||'',tipo:o.type||'',teares:o.looms||[],coberturaMatricula:o.coverMatricula||'',coberturaNome:o.cover||'',tipoCobertura:o.cover?'COBERTURA':'',destinoProducao:o.destination||'',horaInicio:o.start||'',horaFim:o.end||'',observacao:o.note||'',status:o.status||'VALIDADO'}}
+function confirmarIdsViaJsonp(ep, ids, timeoutMs=12000){
+  return new Promise((resolve,reject)=>{
+    const cb='sgpConfirm_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    const script=document.createElement('script');
+    let timer=null;
+    let finalizado=false;
+
+    const limpar=()=>{
+      if(finalizado)return;
+      finalizado=true;
+      if(timer)clearTimeout(timer);
+      try{delete window[cb]}catch(_){window[cb]=undefined}
+      try{script.remove()}catch(_){}
+    };
+
+    window[cb]=(dados)=>{
+      limpar();
+      if(!dados||dados.ok!==true){
+        reject(new Error((dados&&dados.erro)||'CONFIRMACAO_INVALIDA'));
+        return;
+      }
+      resolve(dados);
+    };
+
+    const sep=ep.includes('?')?'&':'?';
+    script.src=ep+sep+
+      'acao=confirmar'+
+      '&ids='+encodeURIComponent(ids.join(','))+
+      '&callback='+encodeURIComponent(cb)+
+      '&_='+Date.now();
+    script.async=true;
+    script.onerror=()=>{
+      limpar();
+      reject(new Error('Falha ao consultar a confirmação no Apps Script.'));
+    };
+
+    timer=setTimeout(()=>{
+      limpar();
+      reject(new Error('Tempo esgotado ao confirmar a gravação.'));
+    },timeoutMs);
+
+    document.head.appendChild(script);
+  });
+}
+
+async function esperarConfirmacao(ep, ids, tentativas=8){
+  let ultimoErro=null;
+  for(let i=0;i<tentativas;i++){
+    try{
+      const r=await confirmarIdsViaJsonp(ep,ids);
+      const encontrados=new Set((r.encontrados||[]).map(String));
+      if(ids.every(id=>encontrados.has(String(id))))return r;
+    }catch(e){
+      ultimoErro=e;
+    }
+    await new Promise(resolve=>setTimeout(resolve,1500));
+  }
+  if(ultimoErro)throw ultimoErro;
+  throw new Error('O Apps Script não confirmou todos os registros enviados.');
+}
+
+async function enviarPacoteNoCors(ep,pacote){
+  const corpo=JSON.stringify(pacote);
+  const resposta=await fetch(ep,{
+    method:'POST',
+    mode:'no-cors',
+    cache:'no-store',
+    redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=UTF-8'},
+    body:corpo
+  });
+  return resposta;
+}
+
 async function syncNow(){
   const ep=localStorage.getItem(EK)||'';
   const key=localStorage.getItem(AK)||'';
 
   if(!ep||!key){
     alert('Configure o endpoint e a chave de sincronização.');
+    return;
+  }
+
+  if(!navigator.onLine){
+    alert('Sem conexão com a internet. Os dados continuam salvos no aparelho.');
     return;
   }
 
@@ -27,10 +106,43 @@ async function syncNow(){
     return;
   }
 
-  const pendingIds=new Set(pending.map(o=>o.id));
+  const ids=pending.map(o=>String(o.id));
+  const pendingIds=new Set(ids);
+
+  /* Primeiro confirma o que já existe no servidor. Isso evita reenviar
+     registros que possam ter sido gravados numa tentativa anterior. */
+  try{
+    const pre=await confirmarIdsViaJsonp(ep,ids);
+    const jaGravados=new Set((pre.encontrados||[]).map(String));
+    if(jaGravados.size){
+      all.forEach(o=>{
+        if(jaGravados.has(String(o.id))){
+          o.sync='SINCRONIZADO';
+          delete o.syncError;
+        }
+      });
+      setOcc(all);
+      updateSync();
+      renderHistory();
+    }
+  }catch(_){
+    /* A pré-checagem ajuda, mas uma falha nela não apaga dados nem impede
+       a tentativa principal. A confirmação final continua obrigatória. */
+  }
+
+  all=getOcc();
+  const aindaPendentes=all.filter(o=>pendingIds.has(String(o.id))&&o.sync!=='SINCRONIZADO');
+
+  if(!aindaPendentes.length){
+    alert(`Sincronização confirmada: ${ids.length} registro(s) já estavam gravado(s) no SGP.`);
+    return;
+  }
+
+  const idsEnvio=aindaPendentes.map(o=>String(o.id));
+  const idsEnvioSet=new Set(idsEnvio);
 
   all.forEach(o=>{
-    if(pendingIds.has(o.id)){
+    if(idsEnvioSet.has(String(o.id))){
       o.sync='SINCRONIZANDO';
       delete o.syncError;
     }
@@ -41,113 +153,54 @@ async function syncNow(){
 
   const pacote={
     apiKey:key,
-    ocorrencias:pending.map(toApiOccurrence)
+    ocorrencias:aindaPendentes.map(toApiOccurrence)
   };
 
-  const token='SGP-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-  let iframe=null;
-  let form=null;
-  let timer=null;
-
   try{
-    const resposta=await new Promise((resolve,reject)=>{
-      iframe=document.createElement('iframe');
-      iframe.name='sgp_sync_frame_'+Date.now();
-      iframe.style.display='none';
-      document.body.appendChild(iframe);
+    /* POST simples, sem preflight CORS. A resposta do POST não é lida.
+       A prova de gravação vem depois, por uma consulta JSONP somente-leitura. */
+    await enviarPacoteNoCors(ep,pacote);
 
-      form=document.createElement('form');
-      form.method='POST';
-      form.action=ep;
-      form.target=iframe.name;
-      form.style.display='none';
-
-      const campos={
-        transport:'iframe',
-        token:token,
-        payload:JSON.stringify(pacote)
-      };
-
-      Object.entries(campos).forEach(([nome,valor])=>{
-        const input=document.createElement('input');
-        input.type='hidden';
-        input.name=nome;
-        input.value=valor;
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-
-      const onMessage=(event)=>{
-        const data=event.data;
-
-        if(
-          !data ||
-          data.source!=='SGP_PREMIO_SYNC' ||
-          data.token!==token
-        ){
-          return;
-        }
-
-        window.removeEventListener('message',onMessage);
-        clearTimeout(timer);
-        resolve(data.response);
-      };
-
-      window.addEventListener('message',onMessage);
-
-      timer=setTimeout(()=>{
-        window.removeEventListener('message',onMessage);
-        reject(new Error('O Apps Script não confirmou o recebimento em 20 segundos.'));
-      },20000);
-
-      form.submit();
-    });
-
-    if(!resposta||typeof resposta!=='object'){
-      throw new Error('Resposta inválida do Apps Script.');
+    let confirmacao;
+    try{
+      confirmacao=await esperarConfirmacao(ep,idsEnvio,8);
+    }catch(primeiroErro){
+      /* Uma única repetição segura. O Apps Script é idempotente pelo ID:
+         se o primeiro POST chegou, o segundo não cria duplicidade. */
+      await enviarPacoteNoCors(ep,pacote);
+      confirmacao=await esperarConfirmacao(ep,idsEnvio,8);
     }
 
-    const okIds=new Set(
-      (resposta.resultados||[])
-        .filter(x=>x.ok)
-        .map(x=>String(x.id))
-    );
-
-    const erros=new Map(
-      (resposta.erros||[])
-        .map(x=>[String(x.id),x.erro])
-    );
-
+    const confirmados=new Set((confirmacao.encontrados||[]).map(String));
     all=getOcc();
-
     all.forEach(o=>{
-      if(okIds.has(String(o.id))){
+      if(confirmados.has(String(o.id))){
         o.sync='SINCRONIZADO';
         delete o.syncError;
-      }else if(pendingIds.has(o.id)){
+      }else if(idsEnvioSet.has(String(o.id))){
         o.sync='ERRO';
-        o.syncError=
-          erros.get(String(o.id)) ||
-          resposta.erro ||
-          'O Apps Script não confirmou este registro.';
+        o.syncError='Registro não confirmado na base central.';
       }
     });
-
     setOcc(all);
     updateSync();
     renderHistory();
 
-    if(resposta.ok===true && okIds.size===pending.length){
-      alert(`Sincronização confirmada: ${okIds.size} registro(s) gravado(s) pelo SGP.`);
+    const totalConfirmado=ids.filter(id=>{
+      const o=getOcc().find(x=>String(x.id)===id);
+      return o&&o.sync==='SINCRONIZADO';
+    }).length;
+
+    if(totalConfirmado===ids.length){
+      alert(`Sincronização confirmada: ${totalConfirmado} registro(s) gravado(s) na base central.`);
     }else{
-      alert(`Sincronização parcial: ${okIds.size} confirmado(s), ${pending.length-okIds.size} com erro.`);
+      alert(`Sincronização parcial: ${totalConfirmado} de ${ids.length} registro(s) confirmados. Os demais continuam salvos no aparelho.`);
     }
 
   }catch(e){
     all=getOcc();
     all.forEach(o=>{
-      if(pendingIds.has(o.id)){
+      if(idsEnvioSet.has(String(o.id))&&o.sync!=='SINCRONIZADO'){
         o.sync='ERRO';
         o.syncError=e.message;
       }
@@ -158,15 +211,11 @@ async function syncNow(){
 
     alert(
       'Sincronização não confirmada: '+e.message+
-      '\nOs dados continuam salvos no aparelho.'
+      '\nNenhum dado local foi apagado. Os registros continuam salvos no aparelho.'
     );
-  }finally{
-    if(timer)clearTimeout(timer);
-    try{if(form)form.remove()}catch(_){}
-    try{if(iframe)iframe.remove()}catch(_){}
   }
 }
 function updateSync(){let a=getOcc(),p=a.filter(x=>x.sync!=='SINCRONIZADO').length,ep=localStorage.getItem(EK)||'',key=localStorage.getItem(AK)||'';$('syncStatus').innerHTML=`Registros: <b>${a.length}</b> · Pendentes/erro: <b>${p}</b><br>Endpoint: ${ep?'configurado':'não configurado'} · Chave: ${key?'configurada':'não configurada'}`;$('endpoint').value=ep;$('apiKey').value=key}
-function backup(){let blob=new Blob([JSON.stringify({version:CFG.version,exportedAt:new Date().toISOString(),occurrences:getOcc()},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SGP_Premio_Backup_'+today()+'.json';a.click();URL.revokeObjectURL(a.href)}async function restore(f){try{let j=JSON.parse(await f.text());if(!Array.isArray(j.occurrences))throw Error('Backup inválido');if(!confirm(`Restaurar ${j.occurrences.length} registros? Isso substituirá os dados locais.`))return;setOcc(j.occurrences);renderHistory();updateSync();alert('Backup restaurado.')}catch(e){alert(e.message)}}async function init(){CFG=await fetch('config.json').then(r=>r.json());$('version').textContent=`Versão ${CFG.version} · Sync 2.0.3 · período 21→20 · TL113/TL114 excluídos`;$('date').value=today();$('people').innerHTML=CFG.teamNames.map(n=>`<option value="${n}">`).join('');renderLooms();renderHistory();renderTeam();updateSync();validate();if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2.0.3',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}}
+function backup(){let blob=new Blob([JSON.stringify({version:CFG.version,exportedAt:new Date().toISOString(),occurrences:getOcc()},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SGP_Premio_Backup_'+today()+'.json';a.click();URL.revokeObjectURL(a.href)}async function restore(f){try{let j=JSON.parse(await f.text());if(!Array.isArray(j.occurrences))throw Error('Backup inválido');if(!confirm(`Restaurar ${j.occurrences.length} registros? Isso substituirá os dados locais.`))return;setOcc(j.occurrences);renderHistory();updateSync();alert('Backup restaurado.')}catch(e){alert(e.message)}}async function init(){CFG=await fetch('config.json').then(r=>r.json());$('version').textContent=`Versão ${CFG.version} · Sync 2.0.4 · período 21→20 · TL113/TL114 excluídos`;$('date').value=today();$('people').innerHTML=CFG.teamNames.map(n=>`<option value="${n}">`).join('');renderLooms();renderHistory();renderTeam();updateSync();validate();if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2.0.4',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}}
 document.addEventListener('click',e=>{let t=e.target.closest('[data-tab]');if(t){document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));$(t.dataset.tab).classList.remove('hidden');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===t));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='team')renderTeam();if(t.dataset.tab==='sync')updateSync();}});$('save').onclick=save;$('auto').onclick=()=>{selected=new Set(personLooms($('person').value,$('date').value));renderLooms();validate()};$('clear').onclick=()=>{selected.clear();renderLooms();validate()};['date','person','cover','type','dest','start','end'].forEach(id=>$(id).addEventListener('change',validate));$('search').oninput=renderHistory;$('teamSearch').oninput=renderTeam;$('saveEndpoint').onclick=()=>{let v=$('endpoint').value.trim(),k=$('apiKey').value.trim();if(v&&!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/i.test(v)){alert('Use a URL /exec do Apps Script.');return}if(!v||!k){alert('Informe o endpoint e a chave.');return}localStorage.setItem(EK,v);localStorage.setItem(AK,k);updateSync();alert('Conexão salva neste aparelho.');};$('syncNow').onclick=syncNow;$('export').onclick=backup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>e.target.files[0]&&restore(e.target.files[0]);init();
 </script></body></html>
