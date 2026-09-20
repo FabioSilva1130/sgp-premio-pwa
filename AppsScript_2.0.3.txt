@@ -1,0 +1,1005 @@
+const CONFIG = {
+  NOME_PLANILHA: 'SGP Premio | Base Central',
+  ABA_OCORRENCIAS: 'Ocorrencias',
+  ABA_LOG: 'Historico',
+  VERSAO: '2.0.3',
+  LOCK_TIMEOUT_MS: 15000
+};
+
+const CABECALHO = [
+  'ID',
+  'Data',
+  'Turno',
+  'Matricula',
+  'Nome',
+  'Tipo',
+  'Teares',
+  'Cobertura_Matricula',
+  'Cobertura_Nome',
+  'Tipo_Cobertura',
+  'Destino_Producao',
+  'Hora_Inicio',
+  'Hora_Fim',
+  'Observacao',
+  'Status',
+  'Criado_Em',
+  'Atualizado_Em'
+];
+
+
+/* =========================================================
+   CONFIGURAÇÃO INICIAL
+   ========================================================= */
+
+function configurarSGP() {
+  const props = PropertiesService.getScriptProperties();
+
+  let id = props.getProperty('PLANILHA_ID');
+  let ss = null;
+
+  if (id) {
+    try {
+      ss = SpreadsheetApp.openById(id);
+    } catch (erro) {
+      id = null;
+    }
+  }
+
+  if (!id) {
+    ss = SpreadsheetApp.create(CONFIG.NOME_PLANILHA);
+    props.setProperty('PLANILHA_ID', ss.getId());
+  }
+
+  prepararAba_(ss, CONFIG.ABA_OCORRENCIAS);
+  prepararAba_(ss, CONFIG.ABA_LOG);
+
+  Logger.log('BASE_ID: ' + ss.getId());
+  Logger.log('BASE_URL: ' + ss.getUrl());
+
+  return {
+    ok: true,
+    sistema: 'SGP Premio',
+    versao: CONFIG.VERSAO,
+    mensagem: 'Base SGP configurada.',
+    planilhaId: ss.getId(),
+    planilhaUrl: ss.getUrl()
+  };
+}
+
+
+/* =========================================================
+   ENDPOINT GET
+   ========================================================= */
+
+function doGet(e) {
+  try {
+    const acao =
+      e && e.parameter
+        ? String(e.parameter.acao || '').trim().toLowerCase()
+        : '';
+
+    if (acao === 'status') {
+      return resposta_({
+        ok: true,
+        sistema: 'SGP Premio',
+        versao: CONFIG.VERSAO,
+        status: 'online',
+        dataHora: new Date().toISOString()
+      });
+    }
+
+    return resposta_({
+      ok: true,
+      sistema: 'SGP Premio',
+      versao: CONFIG.VERSAO,
+      mensagem: 'Endpoint ativo.'
+    });
+
+  } catch (erro) {
+    return resposta_({
+      ok: false,
+      erro: mensagemErro_(erro)
+    });
+  }
+}
+
+
+/* =========================================================
+   ENDPOINT POST
+   ========================================================= */
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  let lockObtido = false;
+
+  const usarIframe = Boolean(
+    e &&
+    e.parameter &&
+    String(e.parameter.transport || '') === 'iframe'
+  );
+
+  const tokenResposta =
+    e && e.parameter
+      ? String(e.parameter.token || '')
+      : '';
+
+  const responder = function(objeto) {
+    return usarIframe
+      ? respostaIframe_(objeto, tokenResposta)
+      : resposta_(objeto);
+  };
+
+  try {
+    if (!e) {
+      throw new Error('NENHUM_DADO_RECEBIDO');
+    }
+
+    let pacote;
+
+    try {
+      /*
+        Compatibilidade de entrada:
+        1) PWA Sync 2.0.2 envia application/x-www-form-urlencoded
+           no campo "payload".
+        2) Integrações/testes anteriores continuam podendo enviar
+           JSON puro em e.postData.contents.
+      */
+      if (
+        e.parameter &&
+        e.parameter.payload
+      ) {
+        pacote = JSON.parse(
+          String(e.parameter.payload)
+        );
+
+      } else if (
+        e.postData &&
+        e.postData.contents
+      ) {
+        pacote = JSON.parse(
+          e.postData.contents
+        );
+
+      } else {
+        throw new Error('NENHUM_DADO_RECEBIDO');
+      }
+
+    } catch (erro) {
+      if (
+        erro &&
+        erro.message === 'NENHUM_DADO_RECEBIDO'
+      ) {
+        throw erro;
+      }
+
+      throw new Error('JSON_INVALIDO');
+    }
+
+    if (
+      !pacote ||
+      typeof pacote !== 'object' ||
+      Array.isArray(pacote)
+    ) {
+      throw new Error('PACOTE_INVALIDO');
+    }
+
+    /* AUTENTICAÇÃO */
+
+    validarApiKey_(pacote.apiKey);
+
+    /* OCORRÊNCIAS */
+
+    let ocorrencias = pacote.ocorrencias;
+
+    if (!ocorrencias && pacote.ocorrencia) {
+      ocorrencias = pacote.ocorrencia;
+    }
+
+    if (!ocorrencias) {
+      throw new Error('OCORRENCIAS_NAO_INFORMADAS');
+    }
+
+    if (!Array.isArray(ocorrencias)) {
+      ocorrencias = [ocorrencias];
+    }
+
+    if (ocorrencias.length === 0) {
+      throw new Error('LISTA_DE_OCORRENCIAS_VAZIA');
+    }
+
+    if (ocorrencias.length > 500) {
+      throw new Error('LIMITE_DE_500_OCORRENCIAS_POR_ENVIO');
+    }
+
+    /* LOCK */
+
+    lock.waitLock(CONFIG.LOCK_TIMEOUT_MS);
+    lockObtido = true;
+
+    const resultados = [];
+    const erros = [];
+
+    ocorrencias.forEach(function(item, indice) {
+      try {
+        const resultado = salvarOcorrencia_(item);
+
+        resultados.push({
+          indice: indice,
+          id: resultado.id,
+          acao: resultado.acao,
+          ok: true
+        });
+
+      } catch (erro) {
+        erros.push({
+          indice: indice,
+          id:
+            item && item.id
+              ? String(item.id)
+              : '',
+          ok: false,
+          erro: mensagemErro_(erro)
+        });
+      }
+    });
+
+    return responder({
+      ok: erros.length === 0,
+      sistema: 'SGP Premio',
+      versao: CONFIG.VERSAO,
+      recebidas: ocorrencias.length,
+      processadas: resultados.length,
+      errosQuantidade: erros.length,
+      resultados: resultados,
+      erros: erros,
+      dataHora: new Date().toISOString()
+    });
+
+  } catch (erro) {
+    return responder({
+      ok: false,
+      sistema: 'SGP Premio',
+      versao: CONFIG.VERSAO,
+      erro: mensagemErro_(erro),
+      dataHora: new Date().toISOString()
+    });
+
+  } finally {
+    if (lockObtido) {
+      try {
+        lock.releaseLock();
+      } catch (_) {}
+    }
+  }
+}
+
+
+/* =========================================================
+   AUTENTICAÇÃO
+   ========================================================= */
+
+function validarApiKey_(apiKeyRecebida) {
+  const apiKeyEsperada =
+    PropertiesService
+      .getScriptProperties()
+      .getProperty('SGP_API_KEY');
+
+  if (!apiKeyEsperada) {
+    throw new Error('API_KEY_NAO_CONFIGURADA');
+  }
+
+  if (!apiKeyRecebida) {
+    throw new Error('NAO_AUTORIZADO');
+  }
+
+  if (
+    String(apiKeyRecebida) !==
+    String(apiKeyEsperada)
+  ) {
+    throw new Error('NAO_AUTORIZADO');
+  }
+
+  return true;
+}
+
+
+/* =========================================================
+   SALVA / ATUALIZA OCORRÊNCIA
+   ========================================================= */
+
+function salvarOcorrencia_(dados) {
+  validarOcorrencia_(dados);
+
+  const ss = obterBase_();
+
+  const aba =
+    prepararAba_(
+      ss,
+      CONFIG.ABA_OCORRENCIAS
+    );
+
+  const historico =
+    prepararAba_(
+      ss,
+      CONFIG.ABA_LOG
+    );
+
+  const agora = new Date();
+
+  const id =
+    String(
+      dados.id ||
+      Utilities.getUuid()
+    ).trim();
+
+  const registros =
+    aba.getDataRange().getValues();
+
+  let linhaExistente = -1;
+
+  for (let i = 1; i < registros.length; i++) {
+    if (
+      String(registros[i][0]).trim() === id
+    ) {
+      linhaExistente = i + 1;
+      break;
+    }
+  }
+
+  let criadoEm = agora;
+
+  if (linhaExistente > 0) {
+    const valorCriado =
+      aba
+        .getRange(linhaExistente, 16)
+        .getValue();
+
+    if (valorCriado) {
+      criadoEm = valorCriado;
+    }
+  }
+
+  const linha =
+    montarLinha_(
+      id,
+      dados,
+      criadoEm,
+      agora
+    );
+
+  /* ATUALIZAÇÃO */
+
+  if (linhaExistente > 0) {
+    const anterior =
+      aba
+        .getRange(
+          linhaExistente,
+          1,
+          1,
+          CABECALHO.length
+        )
+        .getValues()[0];
+
+    if (linhasIguais_(anterior, linha)) {
+      return {
+        id: id,
+        acao: 'SEM_ALTERACAO'
+      };
+    }
+
+    historico.appendRow(anterior);
+
+    aba
+      .getRange(
+        linhaExistente,
+        1,
+        1,
+        CABECALHO.length
+      )
+      .setValues([linha]);
+
+    return {
+      id: id,
+      acao: 'ATUALIZADO'
+    };
+  }
+
+  /* NOVO REGISTRO */
+
+  aba.appendRow(linha);
+
+  return {
+    id: id,
+    acao: 'CRIADO'
+  };
+}
+
+
+/* =========================================================
+   MONTA LINHA
+   ========================================================= */
+
+function montarLinha_(
+  id,
+  dados,
+  criadoEm,
+  atualizadoEm
+) {
+  return [
+    id,
+    limparTexto_(dados.data),
+    limparTexto_(dados.turno),
+    limparTexto_(dados.matricula),
+    limparTexto_(dados.nome),
+    normalizarTipo_(dados.tipo),
+    normalizarTeares_(dados.teares),
+    limparTexto_(dados.coberturaMatricula),
+    limparTexto_(dados.coberturaNome),
+    limparTexto_(dados.tipoCobertura),
+    limparTexto_(dados.destinoProducao),
+    limparTexto_(dados.horaInicio),
+    limparTexto_(dados.horaFim),
+    limparTexto_(dados.observacao),
+    limparTexto_(dados.status || 'VALIDADO'),
+    criadoEm,
+    atualizadoEm
+  ];
+}
+
+
+/* =========================================================
+   VALIDAÇÃO DA OCORRÊNCIA
+   ========================================================= */
+
+function validarOcorrencia_(dados) {
+  if (
+    !dados ||
+    typeof dados !== 'object' ||
+    Array.isArray(dados)
+  ) {
+    throw new Error('REGISTRO_INVALIDO');
+  }
+
+  if (!dados.data) {
+    throw new Error('DATA_OBRIGATORIA');
+  }
+
+  validarData_(dados.data);
+
+  if (
+    !dados.nome &&
+    !dados.matricula
+  ) {
+    throw new Error('PESSOA_OBRIGATORIA');
+  }
+
+  if (!dados.tipo) {
+    throw new Error(
+      'TIPO_DE_OCORRENCIA_OBRIGATORIO'
+    );
+  }
+
+  const teares =
+    normalizarTeares_(dados.teares);
+
+  if (!teares) {
+    throw new Error(
+      'INFORME_PELO_MENOS_UM_TEAR'
+    );
+  }
+
+  const numeros =
+    teares
+      .split(',')
+      .map(function(t) {
+        return Number(
+          t.replace('TL', '').trim()
+        );
+      });
+
+  if (
+    numeros.includes(113) ||
+    numeros.includes(114)
+  ) {
+    throw new Error(
+      'TL113_E_TL114_NAO_PERTENCEM_A_BASE_ATIVA'
+    );
+  }
+
+  if (dados.horaInicio) {
+    validarHorario_(dados.horaInicio);
+  }
+
+  if (dados.horaFim) {
+    validarHorario_(dados.horaFim);
+  }
+
+  return true;
+}
+
+
+/* =========================================================
+   DATA
+   ========================================================= */
+
+function validarData_(data) {
+  const texto =
+    String(data).trim();
+
+  const iso =
+    /^\d{4}-\d{2}-\d{2}$/;
+
+  const br =
+    /^\d{2}\/\d{2}\/\d{4}$/;
+
+  if (
+    !iso.test(texto) &&
+    !br.test(texto)
+  ) {
+    throw new Error(
+      'FORMATO_DE_DATA_INVALIDO'
+    );
+  }
+}
+
+
+/* =========================================================
+   HORÁRIO
+   ========================================================= */
+
+function validarHorario_(hora) {
+  const texto =
+    String(hora).trim();
+
+  const regex =
+    /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  if (!regex.test(texto)) {
+    throw new Error(
+      'FORMATO_DE_HORARIO_INVALIDO'
+    );
+  }
+}
+
+
+/* =========================================================
+   TEARES
+   ========================================================= */
+
+function normalizarTeares_(teares) {
+  if (!teares) {
+    return '';
+  }
+
+  let lista;
+
+  if (Array.isArray(teares)) {
+    lista = teares;
+  } else {
+    lista =
+      String(teares)
+        .split(/[,;|\s]+/)
+        .filter(Boolean);
+  }
+
+  const resultado =
+    lista
+      .map(function(item) {
+        const numero =
+          Number(
+            String(item)
+              .replace(/\D/g, '')
+          );
+
+        if (
+          !numero ||
+          numero < 1 ||
+          numero > 120
+        ) {
+          return null;
+        }
+
+        return (
+          'TL' +
+          String(numero)
+            .padStart(3, '0')
+        );
+      })
+      .filter(Boolean);
+
+  return Array
+    .from(new Set(resultado))
+    .join(', ');
+}
+
+
+/* =========================================================
+   TIPO
+   ========================================================= */
+
+function normalizarTipo_(tipo) {
+  return String(tipo || '')
+    .trim()
+    .toUpperCase();
+}
+
+
+/* =========================================================
+   TEXTO
+   ========================================================= */
+
+function limparTexto_(valor) {
+  if (
+    valor === null ||
+    valor === undefined
+  ) {
+    return '';
+  }
+
+  return String(valor).trim();
+}
+
+
+/* =========================================================
+   COMPARAÇÃO
+   ========================================================= */
+
+function linhasIguais_(anterior, novaLinha) {
+  /*
+    Ignora apenas Atualizado_Em.
+  */
+
+  for (
+    let i = 0;
+    i < CABECALHO.length - 1;
+    i++
+  ) {
+    const a =
+      normalizarComparacao_(
+        anterior[i]
+      );
+
+    const b =
+      normalizarComparacao_(
+        novaLinha[i]
+      );
+
+    if (a !== b) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+function normalizarComparacao_(valor) {
+  if (valor instanceof Date) {
+    return valor.getTime();
+  }
+
+  return String(
+    valor === null ||
+    valor === undefined
+      ? ''
+      : valor
+  ).trim();
+}
+
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+function obterBase_() {
+  const id =
+    PropertiesService
+      .getScriptProperties()
+      .getProperty('PLANILHA_ID');
+
+  if (!id) {
+    throw new Error(
+      'BASE_NAO_CONFIGURADA'
+    );
+  }
+
+  try {
+    return SpreadsheetApp.openById(id);
+
+  } catch (erro) {
+    throw new Error(
+      'NAO_FOI_POSSIVEL_ABRIR_A_BASE'
+    );
+  }
+}
+
+
+/* =========================================================
+   ABAS
+   ========================================================= */
+
+function prepararAba_(ss, nome) {
+  let aba =
+    ss.getSheetByName(nome);
+
+  if (!aba) {
+    aba = ss.insertSheet(nome);
+  }
+
+  if (aba.getLastRow() === 0) {
+    aba
+      .getRange(
+        1,
+        1,
+        1,
+        CABECALHO.length
+      )
+      .setValues([CABECALHO]);
+
+    aba.setFrozenRows(1);
+
+    aba
+      .getRange(
+        1,
+        1,
+        1,
+        CABECALHO.length
+      )
+      .setFontWeight('bold');
+  }
+
+  return aba;
+}
+
+
+/* =========================================================
+   RESPOSTA PARA PWA VIA IFRAME + postMessage
+   Permite confirmar o POST sem depender de CORS.
+   ========================================================= */
+
+function respostaIframe_(objeto, token) {
+  const mensagem = JSON.stringify({
+    source: 'SGP_PREMIO_SYNC',
+    token: String(token || ''),
+    response: objeto
+  }).replace(/</g, '\\u003c');
+
+  const html =
+    '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
+    '<script>' +
+    'window.parent.postMessage(' + mensagem + ', "*");' +
+    '<\\/script>' +
+    '</body></html>';
+
+  return HtmlService
+    .createHtmlOutput(html)
+    .setXFrameOptionsMode(
+      HtmlService.XFrameOptionsMode.ALLOWALL
+    );
+}
+
+
+/* =========================================================
+   RESPOSTA JSON
+   ========================================================= */
+
+function resposta_(objeto) {
+  return ContentService
+    .createTextOutput(
+      JSON.stringify(objeto)
+    )
+    .setMimeType(
+      ContentService.MimeType.JSON
+    );
+}
+
+
+/* =========================================================
+   ERROS
+   ========================================================= */
+
+function mensagemErro_(erro) {
+  if (!erro) {
+    return 'ERRO_DESCONHECIDO';
+  }
+
+  if (erro.message) {
+    return String(erro.message);
+  }
+
+  return String(erro);
+}
+
+
+/* =========================================================
+   TESTE 1
+   CONFIGURAÇÃO
+   Não grava nada.
+   ========================================================= */
+
+function testarConfiguracao() {
+  const props =
+    PropertiesService
+      .getScriptProperties();
+
+  const planilhaId =
+    props.getProperty('PLANILHA_ID');
+
+  const apiKey =
+    props.getProperty('SGP_API_KEY');
+
+  if (!planilhaId) {
+    throw new Error(
+      'PLANILHA_ID_NAO_CONFIGURADO'
+    );
+  }
+
+  if (!apiKey) {
+    throw new Error(
+      'SGP_API_KEY_NAO_CONFIGURADA'
+    );
+  }
+
+  const ss =
+    SpreadsheetApp.openById(
+      planilhaId
+    );
+
+  prepararAba_(
+    ss,
+    CONFIG.ABA_OCORRENCIAS
+  );
+
+  prepararAba_(
+    ss,
+    CONFIG.ABA_LOG
+  );
+
+  Logger.log(
+    'SGP Premio OK | Versao ' +
+    CONFIG.VERSAO
+  );
+
+  Logger.log(
+    'Base: ' +
+    ss.getName()
+  );
+
+  Logger.log(
+    'API Key configurada: SIM'
+  );
+
+  return {
+    ok: true,
+    versao: CONFIG.VERSAO,
+    base: ss.getName(),
+    apiKeyConfigurada: true
+  };
+}
+
+
+/* =========================================================
+   TESTE 2
+   BLOQUEIO SEM API KEY
+   NÃO DEVE GRAVAR NADA.
+   ========================================================= */
+
+function testarBloqueioSemChave() {
+  const eventoFake = {
+    postData: {
+      contents: JSON.stringify({
+        ocorrencias: {
+          id: 'TESTE-SEM-CHAVE',
+          data: '20/09/2026',
+          nome: 'TESTE SEGURANCA',
+          tipo: 'FALTA',
+          teares: ['TL001']
+        }
+      })
+    }
+  };
+
+  const retorno =
+    doPost(eventoFake);
+
+  const resultado =
+    retorno.getContent();
+
+  Logger.log(
+    'TESTE SEM CHAVE: ' +
+    resultado
+  );
+
+  const objeto =
+    JSON.parse(resultado);
+
+  if (
+    objeto.ok !== false ||
+    objeto.erro !== 'NAO_AUTORIZADO'
+  ) {
+    throw new Error(
+      'FALHA_NO_TESTE_DE_SEGURANCA'
+    );
+  }
+
+  Logger.log(
+    'BLOQUEIO SEM CHAVE: OK'
+  );
+
+  return objeto;
+}
+
+
+/* =========================================================
+   TESTE 3
+   ENVIO AUTORIZADO
+   CRIA UMA OCORRÊNCIA DE TESTE.
+   A chave é lida das propriedades.
+   ========================================================= */
+
+function testarEnvioAutorizado() {
+  const apiKey =
+    PropertiesService
+      .getScriptProperties()
+      .getProperty('SGP_API_KEY');
+
+  if (!apiKey) {
+    throw new Error(
+      'SGP_API_KEY_NAO_CONFIGURADA'
+    );
+  }
+
+  const eventoFake = {
+    postData: {
+      contents: JSON.stringify({
+        apiKey: apiKey,
+
+        ocorrencias: {
+          id: 'TESTE-AUTORIZADO-001',
+          data: '20/09/2026',
+          turno: 'TESTE',
+          matricula: '',
+          nome: 'TESTE SISTEMA',
+          tipo: 'TESTE',
+          teares: ['TL001'],
+          coberturaMatricula: '',
+          coberturaNome: '',
+          tipoCobertura: '',
+          destinoProducao: '',
+          horaInicio: '',
+          horaFim: '',
+          observacao:
+            'Registro criado automaticamente para validar a integração SGP.',
+          status: 'TESTE'
+        }
+      })
+    }
+  };
+
+  const retorno =
+    doPost(eventoFake);
+
+  const resultado =
+    retorno.getContent();
+
+  Logger.log(
+    'TESTE AUTORIZADO: ' +
+    resultado
+  );
+
+  const objeto =
+    JSON.parse(resultado);
+
+  if (!objeto.ok) {
+    throw new Error(
+      'FALHA_NO_ENVIO_AUTORIZADO: ' +
+      resultado
+    );
+  }
+
+  Logger.log(
+    'ENVIO AUTORIZADO: OK'
+  );
+
+  return objeto;
+}
